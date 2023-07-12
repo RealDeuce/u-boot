@@ -559,6 +559,10 @@ config TARGET_PCL063_ULL
 	select DM_THERMAL
 	select SUPPORT_SPL
 
+config TARGET_SBC_EC9100
+	bool "Embest SBC-EC9100"
+	depends on MX6UL
+
 config TARGET_SOMLABS_VISIONSOM_6ULL
 	bool "visionsom-6ull"
 	depends on MX6ULL
@@ -683,6 +687,7 @@ source "board/bticino/mamoj/Kconfig"
 source "board/compulab/cm_fx6/Kconfig"
 source "board/dhelectronics/dh_imx6/Kconfig"
 source "board/embest/mx6boards/Kconfig"
+source "board/embest/sbc_ec9100/Kconfig"
 source "board/engicam/imx6q/Kconfig"
 source "board/engicam/imx6ul/Kconfig"
 source "board/freescale/mx6memcal/Kconfig"

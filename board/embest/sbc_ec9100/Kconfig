@@ -1,0 +1,18 @@
+if TARGET_SBC_EC9100
+
+config SYS_BOARD
+            default "sbc_ec9100"
+
+config SYS_VENDOR
+            default "embest"
+
+config SYS_CONFIG_NAME
+            default "sbc_ec9100"
+
+config SYS_CPU
+	default "armv7"
+
+config SYS_SOC
+	default "mx6"
+
+endif
