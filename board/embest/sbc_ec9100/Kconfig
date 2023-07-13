@@ -1,13 +1,13 @@
 if TARGET_SBC_EC9100
 
 config SYS_BOARD
-            default "sbc_ec9100"
+	default "sbc_ec9100"
 
 config SYS_VENDOR
-            default "embest"
+	default "embest"
 
 config SYS_CONFIG_NAME
-            default "sbc_ec9100"
+	default "sbc_ec9100"
 
 config SYS_CPU
 	default "armv7"

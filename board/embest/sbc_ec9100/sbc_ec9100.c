@@ -46,6 +46,11 @@ DECLARE_GLOBAL_DATA_PTR;
 	(PAD_CTL_SRE_FAST | PAD_CTL_SPEED_MED | \
 	PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_47K_UP | PAD_CTL_DSE_120ohm)
 
+#define I2C_PAD_CTRL    (PAD_CTL_PKE | PAD_CTL_PUE |            \
+	PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED |               \
+	PAD_CTL_DSE_40ohm | PAD_CTL_HYS |                       \
+	PAD_CTL_ODE)
+
 static iomux_v3_cfg_t const uart3_pads[] = {
 	MX6_PAD_UART3_TX_DATA__UART3_DCE_TX | MUX_PAD_CTRL(UART_PAD_CTRL),
 	MX6_PAD_UART3_RX_DATA__UART3_DCE_RX | MUX_PAD_CTRL(UART_PAD_CTRL),
@@ -108,6 +113,22 @@ static iomux_v3_cfg_t const iox_pads[] = {
 	/* IOX_nOE */
 	MX6_PAD_SNVS_TAMPER8__GPIO5_IO08 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
+
+#define PC MUX_PAD_CTRL(I2C_PAD_CTRL)
+/* I2C1 for PMIC and EEPROM */
+struct i2c_pads_info i2c_pad_info1 = {
+	.scl = {
+		.i2c_mode =  MX6_PAD_UART4_TX_DATA__I2C1_SCL | PC,
+		.gpio_mode = MX6_PAD_UART4_TX_DATA__GPIO1_IO28 | PC,
+		.gp = IMX_GPIO_NR(1, 28),
+	},
+	.sda = {
+		.i2c_mode = MX6_PAD_UART4_RX_DATA__I2C1_SDA | PC,
+		.gpio_mode = MX6_PAD_UART4_RX_DATA__GPIO1_IO29 | PC,
+		.gp = IMX_GPIO_NR(1, 29),
+	},
+};
+
 
 #define IOX_SDI IMX_GPIO_NR(5, 10)
 #define IOX_STCP IMX_GPIO_NR(5, 7)
@@ -189,7 +210,7 @@ dram_init(void)
 static int board_qspi_init(void)
 {
 	imx_iomux_v3_setup_multiple_pads(quadspi_pads, ARRAY_SIZE(quadspi_pads));
-	enable_qspi_clk(0);
+	//enable_qspi_clk(0);
 
 	return 0;
 }
@@ -202,99 +223,18 @@ board_early_init_f(void)
 	return 0;
 }
 
-int
-board_mmc_init(struct bd_info *bis)
+static void
+my_mmc_init(void)
 {
-	int ret;
-
 	imx_iomux_v3_setup_multiple_pads(usdhc1_pads, ARRAY_SIZE(usdhc1_pads));
 	gpio_direction_input(USDHC1_CD_GPIO);
 	usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC_CLK);
-	ret = fsl_esdhc_initialize(bis, &usdhc_cfg[0]);
-	if (ret)
-		return ret;
 
 	imx_iomux_v3_setup_multiple_pads(usdhc2_pads, ARRAY_SIZE(usdhc2_pads));
 	gpio_direction_output(USDHC2_PWR_GPIO, 0);
 	udelay(500);
 	gpio_direction_output(USDHC2_PWR_GPIO, 1);
 	usdhc_cfg[1].sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);
-	ret = fsl_esdhc_initialize(bis, &usdhc_cfg[1]);
-
-	return ret;
-}
-
-static int
-mmc_get_env_devno(void)
-{
-#if defined(CONFIG_BOOT_FROM_EMMC)
-	return 1;
-#elif defined(CONFIG_BOOT_FROM_SD)
-	return 0;
-#else
-	uint32_t soc_sbmr;
-	int dev_no;
-	uint32_t bootsel;
-
-	printf("Log: detect boot dev from SRC_SBMR register\n");
-
-	soc_sbmr = readl(SRC_BASE_ADDR + 0x4);
-	bootsel = (soc_sbmr & 0x000000FF) >> 6;
-
-	/* Not SD/MMC, use default */
-	if (bootsel != 1)
-		return CONFIG_SYS_MMC_ENV_DEV;
-
-	/* BOOT_CFG2[3] and BOOT_CFG2[4] */
-	dev_no = (soc_sbmr & 0x00001800) >> 11;
-
-	return dev_no;
-#endif
-}
-
-int
-board_mmc_getcd(struct mmc *mmc)
-{
-	struct fsl_esdhc_cfg *cfg = (struct fsl_esdhc_cfg *)mmc->priv;
-	int ret = 0;
-
-	switch (cfg->esdhc_base) {
-		case USDHC1_BASE_ADDR:
-			gpio_direction_input(USDHC1_CD_GPIO);
-			ret = !gpio_get_value(USDHC1_CD_GPIO);
-			break;
-		case USDHC2_BASE_ADDR:
-			ret = 1;
-			break;
-	}
-
-	return ret;
-}
-
-int check_mmc_autodetect(void)
-{
-	char *autodetect_str = env_get("mmcautodetect");
-
-	if ((autodetect_str != NULL) &&
-	    (strcmp(autodetect_str, "yes") == 0)) {
-		return 1;
-	}
-
-	return 0;
-}
-
-void board_late_mmc_init(void)
-{
-	char cmd[32];
-        uint32_t dev_no = mmc_get_env_devno();
-
-	if (!check_mmc_autodetect())
-		return;
-
-	env_set_ulong("mmcdev", dev_no);
-
-	sprintf(cmd, "mmc dev %d", dev_no);
-	run_command(cmd, 0);
 }
 
 int
@@ -302,6 +242,7 @@ board_init(void)
 {
 	imx_iomux_v3_setup_multiple_pads(iox_pads, ARRAY_SIZE(iox_pads));
 	iox74lv_init();
+	my_mmc_init();
 	board_qspi_init();
 
 	return 0;
