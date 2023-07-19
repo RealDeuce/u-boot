@@ -16,8 +16,7 @@
 	compatible = "fsl,embest_evk_ec9100", "fsl,imx6ul";
 
 	chosen {
-		//stdout-path = "/uart3@115200";
-		stdout-path = "/soc/bus@2100000/serial@21f0000";
+		stdout-path = "&uart3@115200";
 	};
 
 	memory {
@@ -59,6 +58,8 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
 	status = "okay";
+	dmas = <&sdma 29 4 0>, <&sdma 30 4 2>;
+	dma-names = "rx", "tx";
 };
 
 &usdhc1 {
@@ -116,6 +117,9 @@
 	fsl,uart-has-rtscts;
 	cts-gpio = <&gpio1 18 0>;
 	status = "okay";
+	linux,rs485-enabled-at-boot-time;
+	dmas = <&sdma 25 4 0>, <&sdma 26 4 2>;
+	dma-names = "rx", "tx";
 };
 
 &usdhc2 {
@@ -138,6 +142,7 @@
 	pmic: pfuze3000@8 {
 		compatible = "fsl,pfuze3001";
 		reg = <0x08>;
+		fsl,pfuze-support-disable-sw;
 
 		regulators {
 			sw1a_reg: sw1a {
@@ -171,6 +176,8 @@
 				regulator-always-on;
 			};
 
+			// TODO: Verify this... reset etc.
+			// It looks like this actually needs to be at least 3
 			snvs_reg: vsnvs {
 				regulator-min-microvolt = <1000000>;
 				regulator-max-microvolt = <3000000>;
@@ -178,23 +185,18 @@
 				regulator-always-on;
 			};
 
-			vref_reg: vrefddr {
-				regulator-boot-on;
-				regulator-always-on;
-			};
-
 			vgen1_reg: vldo1 {
 				regulator-min-microvolt = <1800000>;
-				regulator-max-microvolt = <1800000>;
-				regulator-always-on;
+				regulator-max-microvolt = <3300000>;
 			};
 
+			// Not connected in schematic
 			vgen2_reg: vldo2 {
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <1500000>;
-				regulator-always-on;
+				regulator-min-microvolt = <800000>;
+				regulator-max-microvolt = <1550000>;
 			};
 
+			// Was 1V8, 3V3 on schematic
 			vgen3_reg: vccsd {
 				regulator-min-microvolt = <3300000>;
 				regulator-max-microvolt = <3300000>;
@@ -207,16 +209,20 @@
 				regulator-always-on;
 			};
 
+			// Was 3V3, despite schematic, but has nothing on it.
+			// (Is for WiFi which is DNP)
 			vgen5_reg: vldo3 {
 				regulator-min-microvolt = <1800000>;
-				regulator-max-microvolt = <1800000>;
-				regulator-always-on;
+				regulator-max-microvolt = <3300000>;
 			};
 
+			// Nothing in schemtatic, but listed as 3V3
+			// Logs that it's bringing it from 1800000 if I set
+			// min to 3300000, so I assume that's where it defaults
+			// Also, get an error when disabling it
 			vgen6_reg: vldo4 {
-				regulator-min-microvolt = <3300000>;
+				regulator-min-microvolt = <1800000>;
 				regulator-max-microvolt = <3300000>;
-				regulator-always-on;
 			};
 		};
 	};
@@ -253,6 +259,8 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2>;
 	status = "okay";
+	dmas = <&sdma 27 4 0>, <&sdma 28 4 2>;
+	dma-names = "rx", "tx";
 };
 
 &csi {
@@ -287,6 +295,33 @@
 	status = "okay";
 };
 
+&adc1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_adc1>;
+	status = "okay";
+	vref-supply = <&vgen1_reg>;
+};
+
+&aips2 {
+	adc2: adc@219c000 {
+		compatible = "fsl,imx6ul-adc", "fsl,vf610-adc";
+		reg = <0x0219c000 0x4000>;
+		interrupts = <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clks IMX6UL_CLK_ADC2>;
+		clock-names = "adc";
+		fsl,adck-max-frequency = <30000000>, <40000000>,
+					 <20000000>;
+		status = "disabled";
+	};
+};
+
+&adc2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_adc2>;
+	status = "okay";
+	vref-supply = <&vgen1_reg>;
+};
+
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog_1>;
@@ -298,11 +333,10 @@
 				MX6UL_PAD_SNVS_TAMPER4__GPIO5_IO04  0x17059 /* GPIO EX */
 
 				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09  0x17059 /* GPIO/PWM2*/
-				MX6UL_PAD_GPIO1_IO04__GPIO1_IO04  0x17059 /* GPIO/ADC1*/
-				MX6UL_PAD_GPIO1_IO05__GPIO1_IO05  0x17059 /* GPIO/ADC2 */
 				MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0x80000000 /* LED */
 				
 				MX6UL_PAD_UART1_CTS_B__GPIO1_IO18    	0x80000000
+				MX6UL_PAD_GPIO1_IO01__GPIO1_IO01      0xb0 // tsc
 			>;
 		};
 		
@@ -367,6 +401,7 @@
 		pinctrl_enet1: enet1grp {
 			fsl,pins = <
 				MX6UL_PAD_GPIO1_IO06__ENET1_MDIO        0xa8e8
+				/* These were all 0x1b0b0 */
 				MX6UL_PAD_GPIO1_IO07__ENET1_MDC         0xa0e9
 				MX6UL_PAD_ENET1_TX_DATA0__ENET1_TDATA00	0x1b0b0
 				MX6UL_PAD_ENET1_TX_DATA1__ENET1_TDATA01	0x1b0b0
@@ -477,17 +512,22 @@
 			>;
 		};
 
-
-		pinctrl_tsc2046_pendown: tsc2046_pendown {
-			fsl,pins = <
-					MX6UL_PAD_GPIO1_IO01__GPIO1_IO01      0xb0
-			>;
-		};
-
 		pinctrl_pwm1: pwm1grp {
 			fsl,pins = <
 					MX6UL_PAD_GPIO1_IO08__PWM1_OUT   0x110b0
 			>;
-        	};
+		};
+
+		pinctrl_adc1: adc1grp {
+			fsl,pins = <
+					MX6UL_PAD_GPIO1_IO04__GPIO1_IO04   0xb0
+			>;
+		};
+
+		pinctrl_adc2: adc2grp {
+			fsl,pins = <
+					MX6UL_PAD_GPIO1_IO05__GPIO1_IO05   0xb0
+			>;
+		};
 	};
 };
