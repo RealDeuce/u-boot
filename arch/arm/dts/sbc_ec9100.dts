@@ -16,7 +16,7 @@
 	compatible = "fsl,embest_evk_ec9100", "fsl,imx6ul";
 
 	chosen {
-		stdout-path = "&uart3@115200";
+		stdout-path = "serial2:115200n8";
 	};
 
 	memory {
