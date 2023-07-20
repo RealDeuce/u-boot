@@ -15,4 +15,11 @@ config SYS_CPU
 config SYS_SOC
 	default "mx6"
 
+config EC9100_BOOT_FROM_EMMC
+	depends on TARGET_SBC_EC9100
+	bool "Boot from eMMC"
+	help
+		Select to boot from the on-board eMMC.  If this
+		is n, boots from the SD card.
+
 endif
