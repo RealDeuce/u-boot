@@ -232,7 +232,7 @@
 		pagesize = <64>;
 		reg = <0x50>;
 	};
-	
+
 	ov5640: ov5640@3c {
 		compatible = "ovti,ov5640";
 		reg = <0x3c>;
@@ -300,6 +300,7 @@
 	pinctrl-0 = <&pinctrl_adc1>;
 	status = "okay";
 	vref-supply = <&vgen1_reg>;
+	adc-ch-list = <4>;
 };
 
 &aips2 {
@@ -320,6 +321,7 @@
 	pinctrl-0 = <&pinctrl_adc2>;
 	status = "okay";
 	vref-supply = <&vgen1_reg>;
+	adc-ch-list = <5>;
 };
 
 &iomuxc {
