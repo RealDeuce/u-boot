@@ -81,26 +81,17 @@
 	phy-mode = "rmii";
 	phy-handle = <&ethphy0>;
 	status = "okay";
+	// Deprecated
 	//phy-reset-gpios = <&gpio5 2 GPIO_ACTIVE_LOW>;
 	//phy-reset-duration = <1>;
 	//phy-reset-postdelay = <1>;
 	// This appears to be a FreeBSD extension.
-	// We can auto-detect this though...
-	phy-disable-preamble;
+	//phy-disable-preamble;
 
 	mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		// This appears to be a Linux extension.
-		// We can auto-detect this though...
-		//suppress-preamble;
-		// More dupes
-		// reset-gpios
-		// reset-assert-us
-		// reset-post-delay-us
-		// clock-frequency
-		// suppress-preamble
-		// broken-turn-around
+		suppress-preamble;
 
 		ethphy0: ethernet-phy@2 {
 			compatible = "ethernet-phy-ieee802.3-c22";
