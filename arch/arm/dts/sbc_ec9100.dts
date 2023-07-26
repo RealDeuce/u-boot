@@ -86,7 +86,7 @@
 	//phy-reset-postdelay = <1>;
 	// This appears to be a FreeBSD extension.
 	// We can auto-detect this though...
-	//phy-disable-preamble;
+	phy-disable-preamble;
 
 	mdio {
 		#address-cells = <1>;
